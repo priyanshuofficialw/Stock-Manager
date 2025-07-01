@@ -1,7 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-from fpdf import FPDF
+from fpdf import FPDF  # same import — works the same in fpdf2
+
 import os
 
 app = Flask(__name__)
