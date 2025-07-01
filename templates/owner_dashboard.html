@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Owner Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+<header>
+    <img src="{{ url_for('static', filename='images/banner.png') }}" class="banner">
+</header>
+<div class="container">
+<h1>Welcome, Owner</h1>
+<p><a href="/logout">Logout</a></p>
+
+<h2>Add Stock</h2>
+<form method="POST" action="/add_stock">
+    <input name="item_name" placeholder="Item Name" required>
+    <input name="quantity" type="number" placeholder="Quantity" required>
+    <input name="unit_price" type="number" step="0.01" placeholder="Unit Price" required>
+    <input name="low_stock_threshold" type="number" placeholder="Low Stock Alert At" required>
+    <button type="submit">Add</button>
+</form>
+
+<h2>All Stocks</h2>
+<ul>
+{% for item in stock %}
+    <li>{{ item.item_name }} - Qty: {{ item.quantity }} - ₹{{ item.unit_price }}
+        <a href="/edit_stock/{{ item.id }}">Edit</a> |
+        <a href="/delete_stock/{{ item.id }}">Delete</a>
+    </li>
+{% endfor %}
+</ul>
+
+<h2>Low Stock Alerts</h2>
+<ul>
+{% for item in low_stock_items %}
+    <li>{{ item.item_name }} is low: {{ item.quantity }} left</li>
+{% endfor %}
+</ul>
+
+<h2>Generate Bill</h2>
+<form method="POST" action="/log_usage">
+    <input name="name" placeholder="Customer Name" required>
+    <input name="mobile" placeholder="Mobile Number" required>
+    <input name="item" placeholder="Item Name" required>
+    <input type="number" name="quantity" placeholder="Quantity" required>
+    <input type="number" name="payment" step="0.01" placeholder="Payment">
+    <input name="note" placeholder="Note (Optional)">
+    <button type="submit">Save & Generate PDF Bill</button>
+</form>
+
+<h2>Generated Bills</h2>
+<ul>
+{% for log in logs %}
+    <li>
+        Bill #{{ log.id }} - {{ log.name }} |
+        <a href="{{ url_for('static', filename='bills/bill_' + str(log.id) + '.pdf') }}" target="_blank">View PDF</a>
+    </li>
+{% endfor %}
+</ul>
+
+<h2>Staff Usage Logs</h2>
+<ul>
+{% for entry, staff_name, item_name in usage %}
+    <li>
+        {{ entry.date.strftime('%Y-%m-%d %H:%M') }} - 
+        {{ staff_name }} used {{ entry.used_quantity }} of {{ item_name }}
+    </li>
+{% endfor %}
+</ul>
+
+</div>
+</body>
+</html>

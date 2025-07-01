@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Staff Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+<header>
+    <img src="{{ url_for('static', filename='images/banner.png') }}" class="banner">
+</header>
+<div class="container">
+<h1>Welcome, Staff</h1>
+<p><a href="/logout">Logout</a></p>
+
+<h2>Use Stock</h2>
+<form method="POST" action="/use_stock">
+    <select name="item_id">
+        {% for item in stock %}
+            <option value="{{ item.id }}">{{ item.item_name }}</option>
+        {% endfor %}
+    </select>
+    <input type="number" name="used_quantity" placeholder="Quantity Used" required>
+    <button type="submit">Submit</button>
+</form>
+
+<h2>Add Payment & Usage</h2>
+<form method="POST" action="/log_usage">
+    <input name="name" placeholder="Name" required>
+    <input name="mobile" placeholder="Mobile" required>
+    <input name="item" placeholder="Item Name" required>
+    <input type="number" name="quantity" placeholder="Quantity" required>
+    <input type="number" name="payment" step="0.01" placeholder="Payment">
+    <input name="note" placeholder="Note">
+    <button type="submit">Save & Generate Bill</button>
+</form>
+
+<h2>Generated Bills</h2>
+<ul>
+{% for log in logs %}
+    <li>
+        Bill #{{ log.id }} - {{ log.name }} |
+        <a href="{{ url_for('static', filename='bills/bill_' + str(log.id) + '.pdf') }}" target="_blank">View PDF</a>
+    </li>
+{% endfor %}
+</ul>
+</div>
+</body>
+</html>
