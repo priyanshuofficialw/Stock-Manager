@@ -1,8 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-from fpdf import FPDF  # same import — works the same in fpdf2
-
+from reportlab.pdfgen import canvas
 import os
 
 app = Flask(__name__)
@@ -159,34 +158,29 @@ def log_usage():
     quantity = int(request.form.get("quantity"))
     payment = float(request.form.get("payment") or 0)
     note = request.form.get("note")
+    
     usage = UsageLog(name=name, mobile=mobile, item=item, quantity=quantity,
                      payment=payment, note=note, date=datetime.now())
     db.session.add(usage)
     db.session.commit()
 
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt="Goldsure Inventory Bill", ln=True, align='C')
-    pdf.ln(10)
-    lines = [
-        f"Bill No: {usage.id}",
-        f"Name: {name}",
-        f"Mobile: {mobile}",
-        f"Item: {item}",
-        f"Quantity: {quantity}",
-        f"Payment: Rs. {payment}",
-        f"Note: {note}",
-        f"Date: {usage.date.strftime('%Y-%m-%d %H:%M:%S')}"
-    ]
-    for line in lines:
-        pdf.cell(200, 10, txt=line, ln=True)
     os.makedirs("static/bills", exist_ok=True)
     bill_path = f"static/bills/bill_{usage.id}.pdf"
-    pdf.output(bill_path)
+    
+    c = canvas.Canvas(bill_path)
+    c.setFont("Helvetica", 12)
+    c.drawString(100, 800, "Goldsure Inventory Bill")
+    c.drawString(100, 780, f"Bill No: {usage.id}")
+    c.drawString(100, 760, f"Name: {name}")
+    c.drawString(100, 740, f"Mobile: {mobile}")
+    c.drawString(100, 720, f"Item: {item}")
+    c.drawString(100, 700, f"Quantity: {quantity}")
+    c.drawString(100, 680, f"Payment: Rs. {payment}")
+    c.drawString(100, 660, f"Note: {note}")
+    c.drawString(100, 640, f"Date: {usage.date.strftime('%Y-%m-%d %H:%M:%S')}")
+    c.save()
 
     return redirect(url_for('dashboard'))
-
 @app.route('/view_bills', methods=['GET'])
 def view_bills():
     if 'role' not in session or session['role'] != 'owner':
