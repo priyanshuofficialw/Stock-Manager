@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: goldsure-inventory
+    name: stock-manager
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
