@@ -54,7 +54,8 @@
 {% for log in logs %}
     <li>
         Bill #{{ log.id }} - {{ log.name }} |
-        <a href="{{ url_for('static', filename='bills/bill_' + str(log.id) + '.pdf') }}" target="_blank">View PDF</a>
+        <a href="{{ url_for('static', filename='bills/bill_' + str(log.id) + '.pdf') }}" download>Download PDF</a>
+
     </li>
 {% endfor %}
 </ul>
