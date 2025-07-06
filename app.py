@@ -58,7 +58,7 @@ def login():
         password = request.form['password']
         user = User.query.filter_by(email=email, password=password).first()
         if user:
-            session.clear()
+            session.permanent = True  # ✅ make session survive restarts
             session['user_id'] = user.id
             session['role'] = user.role
             return redirect(url_for('dashboard'))
