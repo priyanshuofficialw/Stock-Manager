@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>All Bills - Goldsure</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+<header>
+    <img src="{{ url_for('static', filename='images/banner.png') }}" class="banner">
+</header>
+<div class="container">
+    <h1>All Bills</h1>
+    {% for log in logs %}
+        <div style="border: 1px solid #ccc; padding: 10px; margin: 10px; text-align: center;">
+            <p><strong>Name:</strong> {{ log.name }}</p>
+            <p><strong>Item:</strong> {{ log.item }}</p>
+            <p><strong>Amount Paid:</strong> ₹{{ log.payment }}</p>
+            <p><strong>Date:</strong> {{ log.date.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+            <img src="{{ url_for('static', filename='bills/bill_' + str(log.id) + '.png') }}" 
+                 style="max-width: 100%; height: auto; width: 300px; border: 1px solid #999; margin-bottom: 10px;">
+            <br>
+            <a href="{{ url_for('static', filename='bills/bill_' + str(log.id) + '.png') }}" download>
+                <button>⬇️ Download Image</button>
+            </a>
+        </div>
+    {% endfor %}
+</div>
+</body>
+</html>

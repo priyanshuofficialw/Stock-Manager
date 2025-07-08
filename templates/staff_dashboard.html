@@ -34,16 +34,8 @@
     <button type="submit">Save & Generate Bill</button>
 </form>
 
-<h2>Generated Bills</h2>
-<ul>
-{% for log in logs %}
-    <li>
-        Bill #{{ log.id }} - {{ log.name }} |
-        <a href="{{ url_for('static', filename='bills/bill_' + str(log.id) + '.pdf') }}" download>Download PDF</a>
+<h2><a href="/bills">📄 View All Bills</a></h2>
 
-    </li>
-{% endfor %}
-</ul>
 </div>
 </body>
 </html>

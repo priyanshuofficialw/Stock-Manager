@@ -46,19 +46,10 @@
     <input type="number" name="quantity" placeholder="Quantity" required>
     <input type="number" name="payment" step="0.01" placeholder="Payment">
     <input name="note" placeholder="Note (Optional)">
-    <button type="submit">Save & Generate PDF Bill</button>
+    <button type="submit">Save & Generate Bill</button>
 </form>
 
-<h2>Generated Bills</h2>
-<ul>
-{% for log in logs %}
-    <li>
-        Bill #{{ log.id }} - {{ log.name }} |
-        <a href="{{ url_for('static', filename='bills/bill_' + str(log.id) + '.pdf') }}" download>Download PDF</a>
-
-    </li>
-{% endfor %}
-</ul>
+<h2><a href="/bills">📄 View All Bills</a></h2>
 
 <h2>Staff Usage Logs</h2>
 <ul>

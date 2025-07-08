@@ -1,14 +1,17 @@
+# -*- coding: utf-8 -*-
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
-from reportlab.pdfgen import canvas
+from datetime import datetime, timedelta
+from PIL import Image, ImageDraw, ImageFont
 import os
 
 app = Flask(__name__)
 app.secret_key = 'secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.permanent_session_lifetime = timedelta(days=30)
 db = SQLAlchemy(app)
 
+# Database Models
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
@@ -47,8 +50,11 @@ class UsageLog(db.Model):
     note = db.Column(db.String(200))
     date = db.Column(db.DateTime, default=datetime.utcnow)
 
+# Routes
 @app.route('/')
 def index():
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
     return render_template('login.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -58,7 +64,7 @@ def login():
         password = request.form['password']
         user = User.query.filter_by(email=email, password=password).first()
         if user:
-            session.permanent = True  # ✅ make session survive restarts
+            session.permanent = 'remember' in request.form  # Remember Me checkbox
             session['user_id'] = user.id
             session['role'] = user.role
             return redirect(url_for('dashboard'))
@@ -70,7 +76,7 @@ def login():
 def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('index'))
-    
+
     user = User.query.get(session['user_id'])
     stock = Stock.query.all()
     logs = UsageLog.query.order_by(UsageLog.date.desc()).all()
@@ -80,25 +86,10 @@ def dashboard():
             .join(User, StockUsage.staff_id == User.id)\
             .join(Stock, StockUsage.item_id == Stock.id)\
             .order_by(StockUsage.date.desc()).all()
-
-        payments = Payment.query.all()
         low_stock_items = [item for item in stock if item.quantity < item.low_stock_threshold]
-        return render_template(
-            'owner_dashboard.html',
-            stock=stock,
-            usage=usage,
-            payments=payments,
-            logs=logs,
-            low_stock_items=low_stock_items,
-            str=str
-        )
+        return render_template('owner_dashboard.html', stock=stock, usage=usage, logs=logs, low_stock_items=low_stock_items, str=str)
     else:
-        return render_template(
-            'staff_dashboard.html',
-            stock=stock,
-            logs=logs,
-            str=str
-        )
+        return render_template('staff_dashboard.html', stock=stock, logs=logs, str=str)
 
 @app.route('/add_stock', methods=['POST'])
 def add_stock():
@@ -112,8 +103,7 @@ def add_stock():
         existing_item.unit_price = unit_price
         existing_item.low_stock_threshold = threshold
     else:
-        stock = Stock(item_name=item_name, quantity=quantity,
-                      unit_price=unit_price, low_stock_threshold=threshold)
+        stock = Stock(item_name=item_name, quantity=quantity, unit_price=unit_price, low_stock_threshold=threshold)
         db.session.add(stock)
     db.session.commit()
     return redirect(url_for('dashboard'))
@@ -150,43 +140,44 @@ def use_stock():
     db.session.commit()
     return redirect(url_for('dashboard'))
 
-@app.route("/log_usage", methods=["POST"])
+@app.route('/log_usage', methods=['POST'])
 def log_usage():
-    name = request.form.get("name")
-    mobile = request.form.get("mobile")
-    item = request.form.get("item")
-    quantity = int(request.form.get("quantity"))
-    payment = float(request.form.get("payment") or 0)
-    note = request.form.get("note")
-    
-    usage = UsageLog(name=name, mobile=mobile, item=item, quantity=quantity,
-                     payment=payment, note=note, date=datetime.now())
+    name = request.form.get('name')
+    mobile = request.form.get('mobile')
+    item = request.form.get('item')
+    quantity = int(request.form.get('quantity'))
+    payment = float(request.form.get('payment') or 0)
+    note = request.form.get('note')
+
+    usage = UsageLog(name=name, mobile=mobile, item=item, quantity=quantity, payment=payment, note=note, date=datetime.now())
     db.session.add(usage)
     db.session.commit()
 
-    os.makedirs("static/bills", exist_ok=True)
-    bill_path = f"static/bills/bill_{usage.id}.pdf"
-    
-    c = canvas.Canvas(bill_path)
-    c.setFont("Helvetica", 12)
-    c.drawString(100, 800, "Goldsure Inventory Bill")
-    c.drawString(100, 780, f"Bill No: {usage.id}")
-    c.drawString(100, 760, f"Name: {name}")
-    c.drawString(100, 740, f"Mobile: {mobile}")
-    c.drawString(100, 720, f"Item: {item}")
-    c.drawString(100, 700, f"Quantity: {quantity}")
-    c.drawString(100, 680, f"Payment: Rs. {payment}")
-    c.drawString(100, 660, f"Note: {note}")
-    c.drawString(100, 640, f"Date: {usage.date.strftime('%Y-%m-%d %H:%M:%S')}")
-    c.save()
+    os.makedirs('static/bills', exist_ok=True)
+    bill_path = f'static/bills/bill_{usage.id}.png'
+
+    img = Image.new('RGB', (400, 400), color=(255, 255, 255))
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.load_default()
+    lines = [
+        f"Goldsure Inventory Bill", f"Bill No: {usage.id}", f"Name: {name}", f"Mobile: {mobile}",
+        f"Item: {item}", f"Quantity: {quantity}", f"Payment: Rs. {payment}",
+        f"Note: {note}", f"Date: {usage.date.strftime('%Y-%m-%d %H:%M:%S')}"
+    ]
+    y = 20
+    for line in lines:
+        draw.text((10, y), line, font=font, fill=(0, 0, 0))
+        y += 25
+    img.save(bill_path)
 
     return redirect(url_for('dashboard'))
-@app.route('/view_bills', methods=['GET'])
-def view_bills():
-    if 'role' not in session or session['role'] != 'owner':
-        return "Unauthorized"
+
+@app.route('/bills')
+def bills():
+    if 'user_id' not in session:
+        return redirect(url_for('index'))
     logs = UsageLog.query.order_by(UsageLog.date.desc()).all()
-    return render_template('view_bills.html', logs=logs, str=str)
+    return render_template('bills.html', logs=logs, str=str)
 
 @app.route('/logout')
 def logout():
@@ -197,10 +188,8 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         if not User.query.filter_by(email='admin@goldsure.com').first():
-            owner = User(name='Goldsure Admin', email='admin@goldsure.com', password='agarwal8623', role='owner')
-            db.session.add(owner)
+            db.session.add(User(name='Goldsure Admin', email='admin@goldsure.com', password='agarwal8623', role='owner'))
         if not User.query.filter_by(email='staff@goldsure.com').first():
-            staff = User(name='Goldsure Staff', email='staff@goldsure.com', password='staff2639', role='staff')
-            db.session.add(staff)
+            db.session.add(User(name='Goldsure Staff', email='staff@goldsure.com', password='staff2639', role='staff'))
         db.session.commit()
     app.run(debug=True)
